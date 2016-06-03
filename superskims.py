@@ -35,7 +35,7 @@ def I_sersic(R, I0, Re, n):
     try:
         I = I0 * np.exp(-b_cb(n) * (R / Re)**(1. / n))
     except FloatingPointError, e:
-        print("FloatingPointError", e)
+        print(e)
         I = 0
     return I
 
@@ -48,6 +48,7 @@ def I_n4551(r, theta):
     Reff = 10**1.22
     I0 = 1.53569e+11
 
+    
 class Galaxy:
     '''This is a representation of a galaxy which needs slitmasks.'''
 
@@ -62,7 +63,7 @@ class Galaxy:
         position_angle: float, in degrees, giving the position angle
                         measured counter-clockwise from north (i.e. positive declination)
         brightness_profile: f: radius in arcsec, position angle in degrees -> 
-                            surface brightness in janskys/arcsec^2
+                            surface brightness in mag/arcsec^2
         '''
         self.name = name
         self.center = center
@@ -173,7 +174,7 @@ class Galaxy:
         # iteratively randomize slit distribution and check spatial sampling
         best_result = np.inf
         for i in range(num_iter):
-            print(i)
+            # print(i)
             # randomize slits
             for mask in self.masks:
                 mask.random_slits()
@@ -204,7 +205,7 @@ class Mask:
         mask_r_eff: float, arcsec, effective radius along the mask position angle
         cone_angle: float, degrees, the opening angle of the slit spatial distribution
         brightness_profile: f: radius in arcsec, position angle in degrees -> 
-                            surface brightness in janskys/arcsec^2
+                            surface brightness in mag/arcsec^2
         slit_separation: float, arcsec, minimum separation between slits
         slit_width: float, arcsec, width of slit, should not be less than 1 arcsec
         min_slit_length: float, arcsec, the minimum slit length
@@ -228,26 +229,53 @@ class Mask:
 
         
     def __repr__(self):
-        mask_params_str = 'Mask PA: {0:.2f}, Mask Reff: {1:.2f}, Cone angle: {2:.2f}'
+        mask_params_str = '<Mask -- PA: {0:.2f}, Reff: {1:.2f}, Cone angle: {2:.2f}>'
         return mask_params_str.format(self.mask_pa, self.mask_r_eff, self.cone_angle)
 
     
-    def get_slit_length(self, x, y, snr=35., integration_time=7200):
+    def get_slit_length(self, x, y, snr=35., sky=19, integration_time=7200, plate_scale=0.1185,
+                        gain=1.2, read_noise=2.5, dark_current=4, imag_count_standard=1367):
         '''
         Determine how long the slit should be, based on the required signal-to-noise ratio.
-        
+
+        Default signal-to-noise ratio is set by kinematic requirements.
+        Default sky background is for dark sky conditions in I band.
+        Default time is for two hours.
+        Plate scale is set for DEIMOS.
+        Gain, read noise, and dark current are rough estimates from 
+            http://www2.keck.hawaii.edu/inst/deimos/deimos_detector_data.html
+        I band counts at I = 20 are from LRIS, but should be close to DEIMOS, see
+            http://www2.keck.hawaii.edu/inst/deimos/lris_vs_deimos.html
+
         To do: calibrate what value counts should have for a desired signal-to-noise ratio
+
         Parameters
         ----------
         x: float, arcsec, x coordinate
         y: float, arcsec, y coordinate
-        snr: float, signal-to-noise ratio
-        sky_noise: float, brightness of sky in jy/arcsec**2
+        snr: float, desired signal-to-noise ratio
+        sky: float, brightness of sky in mag/arcsec^2, default (sky=19) is a wild and crazy guess
         integration_time: float, seconds
+        plate_scale: float, arcsec per pixel
+        gain: float, e- counts per ADU
+        read_noise: float, e- counts
+        dark_current: float, e- counts per pix per hour
+        imag_count_standard: float, e- counts per second at I = 20 mag
         '''
         # counts = SB * area * time
-        sb = self.brightness_profile(np.sqrt(x**2 + y**2), self.mask_pa + np.degrees(np.arctan(y/x)))
-        area = counts / (sb * integration_time)
+        radius = np.sqrt(x**2 + y**2)
+        angle = self.mask_pa + np.degrees(np.arctan(y/x))
+        source_sb = self.brightness_profile(radius, angle)
+
+        # convert to e- per second per arcsec^2
+
+        # still have to define theses!
+        # source_flux = 
+        # sky_flux = 
+
+        # snr = F_source / sqrt(F_sky) * sqrt(npix * t)
+        npix = snr**2 * sky_flux / source_flux**2 / t
+        area = npix * plate_scale**2
         length = area / self.slit_width
         return length
     
@@ -335,5 +363,5 @@ class Slit:
 
     def __repr__(self):
         info_str = ': length of {0:.2f}, PA of {1:.2f} at ({2:.2f}, {3:.2f})'
-        return self.name + info_str.format(self.length, self.pa, self.x, self.y)
+        return '<' + self.name + info_str.format(self.length, self.pa, self.x, self.y) + '>'
         

@@ -234,7 +234,7 @@ class Mask:
 
     
     def get_slit_length(self, x, y, snr=35., sky=19, integration_time=7200, plate_scale=0.1185,
-                        gain=1.2, read_noise=2.5, dark_current=4, imag_count_standard=1367):
+                        gain=1.2, read_noise=2.5, dark_current=4, imag_count_20=1367):
         '''
         Determine how long the slit should be, based on the required signal-to-noise ratio.
 
@@ -260,21 +260,20 @@ class Mask:
         gain: float, e- counts per ADU
         read_noise: float, e- counts
         dark_current: float, e- counts per pix per hour
-        imag_count_standard: float, e- counts per second at I = 20 mag
+        imag_count_20: float, e- counts per second at I = 20 mag
         '''
-        # counts = SB * area * time
         radius = np.sqrt(x**2 + y**2)
         angle = self.mask_pa + np.degrees(np.arctan(y/x))
         source_sb = self.brightness_profile(radius, angle)
 
-        # convert to e- per second per arcsec^2
+        # convert to e- per second per pix^2
+        source_flux = imag_count_20 * 10**(0.4 * (20 - source_sb)) * plate_scale**2
+        sky_flux =  imag_count_20 * 10**(0.4 * (20 - sky)) * plate_scale**2
 
-        # still have to define theses!
-        # source_flux = 
-        # sky_flux = 
-
-        # snr = F_source / sqrt(F_sky) * sqrt(npix * t)
-        npix = snr**2 * sky_flux / source_flux**2 / t
+        dark = dark_current * 3600.
+        denominator = (read_noise**2 + (gain / 2)**2 +
+                       integration_time * (source_flux + sky_flux + dark))
+        npix = snr**2 * denominator * integration_time**2 * source_flux
         area = npix * plate_scale**2
         length = area / self.slit_width
         return length

@@ -13,6 +13,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 from builtins import *
 
+import pdb
 import numpy as np
 from astropy.coordinates import SkyCoord
 
@@ -39,12 +40,43 @@ def I_sersic(R, I0, Re, n):
         I = 0
     return I
 
+
+def mu_sersic(R, mu_e, Re, n):
+    '''
+    Sersic surface brightness profile in mag/arcsec2
+    '''
+    return mu_e + 2.5 * b_cb(n) / np.log(10) * ((R / Re)**(1. / n) - 1)
+
+    
+def a_ellipse(r, theta, axial_ratio):
+    '''
+    Finds the semi-major axis of the ellipse with axial_ratio corresponding to polar coords (r, theta)
+    '''
+    return r / axial_ratio * np.sqrt(np.sin(theta)**2 + axial_ratio**2 * np.cos(theta)**2)
+
+
+def sersic_profile_function(mu_e, Re, n, position_angle, axial_ratio):
+    '''
+    Creates a function, f: (radius, angle) -> surface brightness.
+    I0, Re, n are the Sersic parameters, axial_ratio is the ratio of the minor to major axes,
+    position angle is in degrees east of north, surface brightness is in mag / arcsec2
+
+    To be used in the evaluation of surface brightness profiles in mask making.
+    r should be in arcsec, and theta should be in degrees
+    '''
+    def func(r, theta):
+        # angle relative to major axis, in radians
+        theta_canonical = np.radians(theta - position_angle)
+        R = a_ellipse(r, theta_canonical, axial_ratio)
+        return mu_sersic(R, mu_e, Re, n)
+    return func
+
 def I_n4551(r, theta):
     # NGC4551   188.908249    12.264010   2     5     1     1176   16.1  -22.18    0.17   -4.9    1.22
     distance = 16.1e6 # pc
     Mk = -22.18
     mk = Mk + 5 * (np.log10(distance) - 1)
-    mk_vega = 
+    # mk_vega = 
     Reff = 10**1.22
     I0 = 1.53569e+11
 
@@ -52,7 +84,8 @@ def I_n4551(r, theta):
 class Galaxy:
     '''This is a representation of a galaxy which needs slitmasks.'''
 
-    def __init__(self, name, center, r_eff, axial_ratio, position_angle, brightness_profile):
+    def __init__(self, name, center, r_eff, axial_ratio, position_angle,
+                 mu_eff=-21.0, brightness_profile=None):
         '''
         Parameters
         ----------
@@ -62,19 +95,26 @@ class Galaxy:
         axial_ratio: float, ratio of minor axis to major axis, equal to (1 - flattening)
         position_angle: float, in degrees, giving the position angle
                         measured counter-clockwise from north (i.e. positive declination)
+        mu_eff: float, in mag [per arcsec2], giving the surface brightness at r_eff
         brightness_profile: f: radius in arcsec, position angle in degrees -> 
                             surface brightness in mag/arcsec^2
+                            If None, default to de Vaucouleurs' profile
         '''
         self.name = name
         self.center = center
         self.r_eff = r_eff
+        self.mu_eff = mu_eff
         self.axial_ratio = axial_ratio
         self.position_angle = position_angle
-        self.brightness_profile = brightness_profile
+        if brightness_profile is not None:
+            self.brightness_profile = brightness_profile
+        else:
+            # default to deVaucouleurs' profile
+            self.brightness_profile = sersic_profile_function(mu_eff, r_eff, 4, position_angle, axial_ratio)
         self.masks = []
 
     def __repr__(self):
-        return self.name + ': ' + self.center.to_string('hmsdms')
+        return '<Galaxy ' + self.name + ': ' + self.center.to_string('hmsdms') + '>'
         
     def create_masks(self, num_masks):
         '''
@@ -265,17 +305,18 @@ class Mask:
         radius = np.sqrt(x**2 + y**2)
         angle = self.mask_pa + np.degrees(np.arctan(y/x))
         source_sb = self.brightness_profile(radius, angle)
-
         # convert to e- per second per pix^2
-        source_flux = imag_count_20 * 10**(0.4 * (20 - source_sb)) * plate_scale**2
-        sky_flux =  imag_count_20 * 10**(0.4 * (20 - sky)) * plate_scale**2
+        mag_plate_scale = - 2.5 * np.log10(plate_scale**2)
+        source_flux = imag_count_20 * 10**(0.4 * (20 - source_sb - mag_plate_scale))
+        sky_flux = imag_count_20 * 10**(0.4 * (20 - sky - mag_plate_scale))
 
-        dark = dark_current * 3600.
-        denominator = (read_noise**2 + (gain / 2)**2 +
-                       integration_time * (source_flux + sky_flux + dark))
-        npix = snr**2 * denominator * integration_time**2 * source_flux
+        # dark = dark_current / 3600.
+        # denominator = (read_noise**2 + (gain / 2)**2 +
+        #                integration_time * (source_flux + sky_flux + dark))
+        npix = snr**2 * sky_flux / integration_time / source_flux**2
         area = npix * plate_scale**2
         length = area / self.slit_width
+        pdb.set_trace()
         return length
     
 

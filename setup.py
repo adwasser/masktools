@@ -18,5 +18,5 @@ setup(name='masktools',
       package_data={'': ['LICENSE', 'README.md', 'version.py']},
       scripts=['bin/superskims'],
       include_package_data=True,
-      install_requires=['numpy', 'astropy', 'astroquery'],
+      install_requires=['numpy', 'matplotlib', 'astropy', 'astroquery'],
       zip_safe=False)

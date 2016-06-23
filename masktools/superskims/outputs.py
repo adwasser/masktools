@@ -11,7 +11,7 @@ from astropy import units as u
 from .utils import mask_to_sky
 
 def save_to_regions(mask, writeto=None):
-    pass
+    raise NotImplementedError
 
 
 def save_to_dsim(mask, center, writeto=None):

@@ -13,37 +13,6 @@ from matplotlib import pyplot as plt
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
-def run(name, r_eff, axial_ratio, position_angle, num_masks,
-        mu_eff=22.0, ra=None, dec=None):
-    '''
-    Wrapper to run the superskims mask making code on a given galaxy.
-
-    Parameters
-    ----------
-    name: str, galaxy name
-    
-    ra: float, degrees J2000
-    dec: float, degrees J2000
-    
-    '''
-    from .outputs import save_to_dsim
-    from .galaxy import Galaxy
-    try:
-        from astroquery.ned import Ned
-        t = Ned.query_object(name)
-        ra = t['RA(deg)'][0]
-        dec = t['DEC(deg)'][0]
-    except ImportError:
-        ra = ra
-        dec = dec
-    center = SkyCoord(ra, dec, unit='deg')
-    galaxy = Galaxy(name, center, r_eff, axial_ratio, position_angle, mu_eff)
-    galaxy.optimize(num_masks, num_iter=100, resolution=0.5)
-    for mask in galaxy.masks:
-        output_file = mask.name + '_PA{:0.1f}_superskims.dsim'.format(mask.mask_pa)
-        save_to_dsim(mask, galaxy.center, output_file)
-
-
 def b_cb(n):
     '''
     'b' parameter in the Sersic function, from the Ciotti & Bertin (1999) 

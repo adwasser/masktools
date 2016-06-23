@@ -1,0 +1,80 @@
+#!/usr/bin/python
+'''
+Runs the superskims code with default settings to produce dsim input files.
+'''
+
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from builtins import *
+
+import sys
+import argparse
+
+from astropy.coordinates import SkyCoord
+
+from masktools.superskims.outputs import save_to_dsim
+from masktools.superskims.galaxy import Galaxy
+
+# input argument parser
+parser = argparse.ArgumentParser(description=('This script generates dsim input files from the'
+                                              ' inputted galaxy parameters'))
+parser.add_argument('name', type=str,
+                    help='Name of galaxy for output and NED lookup')
+parser.add_argument('R_eff', type=float,
+                    help='Effective radius of galaxy in arcseconds')
+parser.add_argument('axial_ratio', type=float, 
+                    help='Ratio of minor axis to major axis')
+parser.add_argument('position_angle', type=float,
+                    help='In degrees counter-clockwise from North')
+parser.add_argument('num_masks', type=int,
+                    help='Number of masks for the galaxy')
+parser.add_argument('-m', '--mu_eff', type=float, dest='mu_eff', default=22.0,
+                    help='Effective surface brightness in mag/arcsec^2, default is 22')
+parser.add_argument('-r', '--ra', type=float, dest='ra', default=0,
+                    help='Right ascension, in degrees J2000.  If name is findable by NED, will use that one instead.')
+parser.add_argument('-d', '--dec', type=float, dest='dec', default=0,
+                    help='Declination, in degrees J2000.  If name is findable by NED, will use that one instead.')
+parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
+                    help='If toggled, suppress console output.')
+
+def run(name, r_eff, axial_ratio, position_angle, num_masks,
+        mu_eff=22.0, ra=None, dec=None, quiet=False):
+    '''
+    Wrapper to run the superskims mask making code on a given galaxy.
+
+    Parameters
+    ----------
+    name: str, galaxy name
+    
+    ra: float, degrees J2000
+    dec: float, degrees J2000
+    
+    '''
+    try:
+        from astroquery.ned import Ned
+        t = Ned.query_object(name)
+        ra = t['RA(deg)'][0]
+        dec = t['DEC(deg)'][0]
+        if not quiet:
+            print('NED found ' + name + ' at an RA/Dec of {:.4f}, {:.4f} degrees'.format(ra, dec))
+    except ImportError:
+        if not quiet:
+            print('astroquery package not found, using default RA/Dec of {:.4f}, {:.4f} degrees'.format(ra, dec))
+        ra = ra
+        dec = dec
+    center = SkyCoord(ra, dec, unit='deg')
+    galaxy = Galaxy(name, center, r_eff, axial_ratio, position_angle, mu_eff)
+    galaxy.optimize(num_masks, num_iter=100, resolution=0.5)
+    for mask in galaxy.masks:
+        output_file = mask.name + '_PA{:0.1f}_superskims.dsim'.format(mask.mask_pa)
+        save_to_dsim(mask, galaxy.center, output_file)
+    return 0
+
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+    exit = run(args.name, args.R_eff, args.axial_ratio, args.position_angle, args.num_masks,
+               args.mu_eff, args.ra, args.dec, args.quiet)
+    if exit == 0 and not quiet:
+        print('Finished successfully')
+    

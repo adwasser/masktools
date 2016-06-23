@@ -51,14 +51,15 @@ This packages installs the `superskims` script, which creates dsim input files f
 >   -q, --quiet           If toggled, suppress console output.
 
 For more fine-grained control, you can access the Mask and Galaxy classes through the `masktools.superskims` package while within a python environment, e.g.,::
-    In [1]: from masktools import superskims
-    In [2]: from astropy.coordinates import SkyCoord
-    In [3]: center = SkyCoord('12h35m37.9s +12d15m50s')
-    In [4]: galaxy = superskims.Galaxy(name='N4551', center=center, r_eff=16.6, axial_ratio=0.75, position_angle=70.5)
-    In [5]: galaxy.optimize(num_masks=4)
-    Out[5]: 5.5219606482257788
-    In [6]: for mask in galaxy.masks:
-       ...:     output_file = mask.name + '_PA{:0.1f}_superskims.dsim'.format(mask.mask_pa)
-       ...:     superskims.outputs.save_to_dsim(mask, galaxy.center, output_file)
+
+    from masktools import superskims
+    from astropy.coordinates import SkyCoord
+    center = SkyCoord('12h35m37.9s +12d15m50s')
+    galaxy = superskims.Galaxy(name='N4551', center=center, r_eff=16.6, 
+                               axial_ratio=0.75, position_angle=70.5)
+    galaxy.optimize(num_masks=4)
+    for mask in galaxy.masks:
+        output_file = mask.name + '_PA{:0.1f}_superskims.dsim'.format(mask.mask_pa)
+        superskims.outputs.save_to_dsim(mask, galaxy.center, output_file)
 
 

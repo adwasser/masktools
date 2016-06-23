@@ -1,6 +1,7 @@
 from setuptools import setup
+from distutils.util import convert_path
 
-exec(open('version.py').read())
+exec(open(convert_path('masktools/version.py')).read())
 
 with open('README.md') as f:
     long_description = f.read()
@@ -15,8 +16,8 @@ setup(name='masktools',
       author_email='adwasser@ucsc.edu',
       license='MIT',
       packages=['masktools', 'masktools/superskims'],
-      package_data={'': ['LICENSE', 'README.md', 'version.py']},
+      package_data={'': ['LICENSE', 'README.md', 'masktools/version.py']},
       scripts=['bin/superskims'],
       include_package_data=True,
-      install_requires=['numpy', 'matplotlib', 'astropy', 'astroquery'],
+      install_requires=['numpy', 'matplotlib', 'astropy'],
       zip_safe=False)

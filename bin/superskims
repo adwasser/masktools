@@ -5,7 +5,6 @@ Runs the superskims code with default settings to produce dsim input files.
 
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-from builtins import *
 
 import sys
 import argparse
@@ -45,13 +44,17 @@ def run(name, r_eff, axial_ratio, position_angle, num_masks,
     Parameters
     ----------
     name: str, galaxy name
-    
-    ra: float, degrees J2000
-    dec: float, degrees J2000
+    r_eff: float, arcsec, effective radius of galaxy
+    axial_ratio: float, ratio of minor to major axes
+    position_angle: float, degrees east of north (counter-clockwise)
+    num_masks: int, number of mask files to create
+    ra: float, degrees J2000, if name can be found by NED (and astroquery is installed), this is overwritten
+    dec: float, degrees J2000, if name can be found by NED (and astroquery is installed), this is overwritten
     
     '''
     try:
         from astroquery.ned import Ned
+        from astroquery.ned.core import RemoteServiceError
         t = Ned.query_object(name)
         ra = t['RA(deg)'][0]
         dec = t['DEC(deg)'][0]
@@ -62,6 +65,11 @@ def run(name, r_eff, axial_ratio, position_angle, num_masks,
             print('astroquery package not found, using default RA/Dec of {:.4f}, {:.4f} degrees'.format(ra, dec))
         ra = ra
         dec = dec
+    except RemoteServiceError:
+        if not quiet:
+            print(name + ' not found in NED, using default RA/Dec of {:.4f}, {:.4f} degrees'.format(ra, dec))
+        ra = ra
+        dec = dec        
     center = SkyCoord(ra, dec, unit='deg')
     galaxy = Galaxy(name, center, r_eff, axial_ratio, position_angle, mu_eff)
     galaxy.optimize(num_masks, num_iter=100, resolution=0.5)
@@ -75,6 +83,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     exit = run(args.name, args.R_eff, args.axial_ratio, args.position_angle, args.num_masks,
                args.mu_eff, args.ra, args.dec, args.quiet)
-    if exit == 0 and not quiet:
+    if exit == 0 and not args.quiet:
         print('Finished successfully')
     

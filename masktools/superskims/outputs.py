@@ -1,6 +1,5 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-from builtins import *
 
 __all__ = ['save_to_regions', 'save_to_dsim']
 

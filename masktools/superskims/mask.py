@@ -101,6 +101,24 @@ class Mask:
         yy = np.array([slit.y for slit in self.slits])
         return xx, yy
 
+    def _test_slits(self):
+        # reset slits
+        self.slits = []
+        # x is at the left edge of the slit
+        x = self.slit_separation / 2.
+        count = 0
+        while x < self.mask_r_eff * self.max_radius_factor:
+            # y_cone = np.tan(np.radians(self.cone_angle / 2.)) * x
+            # y = np.random.uniform(-y_cone, y_cone)
+            y = 0
+            length = max(self.min_slit_length, self.get_slit_length(x, y))
+            # first run gets even indices, rotated copy gets odd indices
+            name = 'skims{0:02d}'.format(2 * count)
+            self.slits.append(Slit(x + length / 2, y, length, self.slit_width,
+                                   self.mask_pa + self.angle_offset, name=name))
+            count += 1
+            x += length + self.slit_separation
+        
     def random_slits(self):
         '''
         Produce a random alignment (satisfying the opening angle restriction), with slit lengths

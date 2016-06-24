@@ -26,15 +26,12 @@ def slit_patches(mask, color=None, sky_coords=False, center=None):
             L = np.sqrt(dx**2 + dy**2) / 2
             alpha = np.tan(dy / dx)
             phi = np.pi / 2 - np.radians(slit.pa)
-            x1 = L * np.cos(alpha)
-            y1 = L * np.sin(alpha)
-            x2 = L * np.cos(phi + alpha)
-            y2 = L * np.sin(phi + alpha)
-            ra, dec = tuple(mask_to_sky(x - dx / 2, y - dy / 2,
-                                        mask.mask_pa, center.dec.degree))
+            delta_x = L * (np.cos(alpha + phi) - np.cos(alpha))
+            delta_y = L * (np.sin(alpha + phi) - np.sin(alpha))
+            ra, dec = mask_to_sky(x - dx / 2, y - dy / 2, mask.mask_pa, center.dec.degree)
             blc0 = (ra, dec)
             angle = (90 - slit.pa)
-            blc = (ra + x1 - x2, dec + y1 - y2)
+            blc = (ra + delta_x, dec - delta_y)
             # blc = (ra + x1 + x2, dec - y1 + y2)            
         else:
             blc = (x - dx / 2, y - dy / 2)
@@ -46,14 +43,12 @@ def slit_patches(mask, color=None, sky_coords=False, center=None):
     return patches
 
 
-def plot_mask(mask, color=None, writeto=None, annotate=False, center=None):
+def plot_mask(mask, color=None, writeto=None, annotate=False):
     '''Plot the slits in a mask, in mask coords'''
 
     fig, ax = plt.subplots()
     
     for p in slit_patches(mask, color=color, sky_coords=False):
-        ax.add_patch(p)
-    for p in slit_patches(mask, color='r', sky_coords=True, center=center):
         ax.add_patch(p)
         
     if annotate:
@@ -63,8 +58,7 @@ def plot_mask(mask, color=None, writeto=None, annotate=False, center=None):
     ylim = mask.y_max / 2
     lim = min(xlim, ylim)
     ax.set_title(mask.name)
-    # ax.set_xlim(-lim, lim)
-    ax.set_xlim(lim, -lim)
+    ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
     ax.set_xlabel('x offset (arcsec)', fontsize=16)
     ax.set_ylabel('y offset (arcsec)', fontsize=16)

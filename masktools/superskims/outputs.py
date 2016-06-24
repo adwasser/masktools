@@ -20,16 +20,16 @@ def save_to_regions(mask, center, writeto=None):
         ra_str, dec_str = center.to_string('hmsdms').split(' ')
         name = mask.name + '_PA{:0.1f}'.format(mask.mask_pa)
         x, y = mask.slit_positions()
-        ra_offsets, dec_offsets = mask_to_sky(x, y, mask.mask_pa)
+        ra_offsets, dec_offsets = mask_to_sky(x, y, mask.mask_pa, center.dec.deg)
         ra = (ra_offsets / np.cos(center.dec.radian) + center.ra.arcsec) * u.arcsec
         dec = (dec_offsets + center.dec.arcsec) * u.arcsec
         coords = SkyCoord(ra, dec)
         for i, slit in enumerate(mask.slits):
             name = slit.name
             ra, dec = coords[i].to_string('hmsdms', sep=':').split()
-            pa = '{:.2f}'.format(slit.pa + 90)
-            width = '{:.2f}'.format(slit.length) + '\"'
-            height = '{:.2f}'.format(slit.width) + '\"'
+            pa = '{:.2f}'.format(slit.pa)
+            height = '{:.2f}'.format(slit.length) + '\"'
+            width = '{:.2f}'.format(slit.width) + '\"'
             line = 'box(' + ', '.join([ra, dec, width, height, pa]) + ') # text={' + name + '}\n'
             f.write(line)
 

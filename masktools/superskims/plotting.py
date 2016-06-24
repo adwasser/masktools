@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 from itertools import cycle
+import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
@@ -9,40 +10,52 @@ from .utils import mask_to_sky
 
 __all__ = ['plot_mask', 'plot_galaxy']
 
-def slit_patches(mask, color=None, sky_coords=False, reverse=False):
-    '''Constructs mpl patches for the slits of a mask.  If sky_coords is true, output in relative ra/dec'''
+def slit_patches(mask, color=None, sky_coords=False, center=None):
+    '''
+    Constructs mpl patches for the slits of a mask.  If sky_coords is true, 
+    output in relative ra/dec.  galaxy center is necessary for sky_coords
+    '''
     patches = []
     for slit in mask.slits:
-        if reverse:
-            x = -slit.x
-            y = -slit.y
-        else:
-            x = slit.x
-            y = slit.y
-        dx = slit.length / 2
-        dy = slit.width / 2
+        x = slit.x
+        y = slit.y
+        dx = slit.length
+        dy = slit.width
         # bottom left-hand corner
         if sky_coords:
-            blc = tuple(mask_to_sky(x - dx, y - dy, mask.mask_pa))
-            angle = slit.pa + 90
+            L = np.sqrt(dx**2 + dy**2) / 2
+            alpha = np.tan(dy / dx)
+            phi = np.pi / 2 - np.radians(slit.pa)
+            x1 = L * np.cos(alpha)
+            y1 = L * np.sin(alpha)
+            x2 = L * np.cos(phi + alpha)
+            y2 = L * np.sin(phi + alpha)
+            ra, dec = tuple(mask_to_sky(x - dx / 2, y - dy / 2,
+                                        mask.mask_pa, center.dec.degree))
+            blc0 = (ra, dec)
+            angle = (90 - slit.pa)
+            blc = (ra + x1 - x2, dec + y1 - y2)
+            # blc = (ra + x1 + x2, dec - y1 + y2)            
         else:
             blc = (x - dx / 2, y - dy / 2)
             angle = slit.pa - mask.mask_pa
         patches.append(mpl.patches.Rectangle(blc, dx, dy, angle=angle,
                                              fc=color, ec='k', alpha=0.5))
+        # patches.append(mpl.patches.Rectangle(blc0, dx, dy, angle=0,
+        #                                      fc=color, ec='k', alpha=0.1))
     return patches
 
 
-def plot_mask(mask, color=None, writeto=None, annotate=False):
+def plot_mask(mask, color=None, writeto=None, annotate=False, center=None):
     '''Plot the slits in a mask, in mask coords'''
 
     fig, ax = plt.subplots()
     
-    for p in slit_patches(mask, color=color):
+    for p in slit_patches(mask, color=color, sky_coords=False):
         ax.add_patch(p)
-    # for p in slit_patches(mask, color=color, reverse=True):
-    #     ax.add_patch(p)
-    # ax.add_collection(pc)
+    for p in slit_patches(mask, color='r', sky_coords=True, center=center):
+        ax.add_patch(p)
+        
     if annotate:
         for slit in mask.slits:
             ax.text(slit.x - 3, slit.y + 1, slit.name, size=8)
@@ -50,10 +63,11 @@ def plot_mask(mask, color=None, writeto=None, annotate=False):
     ylim = mask.y_max / 2
     lim = min(xlim, ylim)
     ax.set_title(mask.name)
-    ax.set_xlim(-lim, lim)
+    # ax.set_xlim(-lim, lim)
+    ax.set_xlim(lim, -lim)
     ax.set_ylim(-lim, lim)
-    ax.set_xlabel('RA offset (arcsec)', fontsize=16)
-    ax.set_ylabel('Dec offset (arcsec)', fontsize=16)
+    ax.set_xlabel('x offset (arcsec)', fontsize=16)
+    ax.set_ylabel('y offset (arcsec)', fontsize=16)
     if writeto is not None:
         fig.savefig(writeto)
     return fig, ax
@@ -67,15 +81,17 @@ def plot_galaxy(galaxy, writeto=None):
     for i, mask in enumerate(galaxy.masks):
         color = next(colors)
         label = str(i + 1) + galaxy.name + ' (PA = {:.2f})'.format(mask.mask_pa)
-        handles.append(mpl.patches.Patch(fc=color, ec='k', alpha=0.5, label=label))
-        for p in slit_patches(mask, color=color, sky_coords=True):
+        handles.append(mpl.patches.Patch(fc=color, ec='k',
+                                         alpha=0.5, label=label))
+        for p in slit_patches(mask, color=color,
+                              sky_coords=True, center=galaxy.center):
             ax.add_patch(p)
-        # for p in slit_patches(mask, color=color, sky_coords=True, reverse=True):
-        #     ax.add_patch(p)
     xlim = galaxy.masks[0].x_max / 2
     ylim = galaxy.masks[0].y_max / 2
     lim = min(xlim, ylim)
-    ax.set_xlim(-lim, lim)
+    # reverse x axis so it looks like sky
+    ax.set_xlim(lim, -lim)
+    # ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
     ax.set_title(galaxy.name, fontsize=16)
     ax.set_xlabel('RA offset (arcsec)', fontsize=16)

@@ -67,11 +67,11 @@ def sersic_profile_function(mu_eff, r_eff, n, position_angle, axial_ratio):
     return func
 
 
-def mask_to_sky(x, y, mask_pa):
+def mask_to_sky(x, y, mask_pa, dec_center):
     '''Convert mask x, y coordinates (along major and minor axis) to sky ra and dec coordinates.'''
-    theta = np.pi + np.radians(mask_pa + 90)
-    ra = -np.cos(theta) * x + -np.sin(theta) * y
-    dec = -np.sin(theta) * x + np.cos(theta) * y
+    theta = np.radians(90 - mask_pa)
+    ra = (np.cos(theta) * x - np.sin(theta) * y) * np.cos(np.radians(dec_center))
+    dec = np.sin(theta) * x + np.cos(theta) * y
     return ra, dec
     
 

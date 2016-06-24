@@ -124,9 +124,9 @@ class Galaxy:
         distances = np.amin(np.sqrt((x_slits - x_points)**2 +
                                     (y_slits - y_points)**2),
                             axis=0)
-        return np.mean(distances)
+        return np.amax(distances)
 
-    def optimize(self, num_masks=2, num_iter=100, resolution=0.5):
+    def optimize(self, num_masks=4, num_iter=100, resolution=0.5):
         '''
         Find the optimal spatial sampling of mask slits.
 

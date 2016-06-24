@@ -9,8 +9,29 @@ from astropy import units as u
 
 from .utils import mask_to_sky
 
-def save_to_regions(mask, writeto=None):
-    raise NotImplementedError
+def save_to_regions(mask, center, writeto=None):
+    '''
+    mask is a Mask, center is a SkyCoord, writeto is the output file name
+    '''
+    with open(writeto, 'w') as f:
+        f.write('# Region file format: DS9 version 4.1\n')
+        f.write('global color=red move=0 select=0\n')
+        f.write('j2000\n')        
+        ra_str, dec_str = center.to_string('hmsdms').split(' ')
+        name = mask.name + '_PA{:0.1f}'.format(mask.mask_pa)
+        x, y = mask.slit_positions()
+        ra_offsets, dec_offsets = mask_to_sky(x, y, mask.mask_pa)
+        ra = (ra_offsets / np.cos(center.dec.radian) + center.ra.arcsec) * u.arcsec
+        dec = (dec_offsets + center.dec.arcsec) * u.arcsec
+        coords = SkyCoord(ra, dec)
+        for i, slit in enumerate(mask.slits):
+            name = slit.name
+            ra, dec = coords[i].to_string('hmsdms', sep=':').split()
+            pa = '{:.2f}'.format(slit.pa + 90)
+            width = '{:.2f}'.format(slit.length) + '\"'
+            height = '{:.2f}'.format(slit.width) + '\"'
+            line = 'box(' + ', '.join([ra, dec, width, height, pa]) + ') # text={' + name + '}\n'
+            f.write(line)
 
 
 def save_to_dsim(mask, center, writeto=None):

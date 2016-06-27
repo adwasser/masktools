@@ -1,7 +1,7 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
-__all__ = ['save_to_regions', 'save_to_dsim']
+__all__ = ['save_to_regions', 'save_galaxy_to_regions', 'save_to_dsim']
 
 from itertools import cycle
 import numpy as np
@@ -83,6 +83,6 @@ def save_to_dsim(mask, center, writeto=None):
             pa = '{:.2f}'.format(slit.pa)
             half_len = '{:.2f}'.format(slit.length / 2)
             width = '{:.2f}'.format(slit.width)
-            line = name + '\t'.join([ra, dec, '2000.0', '0', 'R', '100', '1',
+            line = name + '\t'.join([ra, dec, '2000.0', '0', 'R', '100', '1', '1',
                                      pa, half_len, width]) + '\n'
             f.write(line)

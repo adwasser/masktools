@@ -11,7 +11,7 @@ import argparse
 
 from astropy.coordinates import SkyCoord
 
-from masktools.superskims.outputs import save_to_dsim
+from masktools.superskims.outputs import save_to_dsim, save_galaxy_to_regions
 from masktools.superskims.galaxy import Galaxy
 
 # input argument parser
@@ -35,6 +35,8 @@ parser.add_argument('-d', '--dec', type=float, dest='dec', default=0,
                     help='Declination, in degrees J2000.  If name is findable by NED, will use that one instead.')
 parser.add_argument('-q', '--quiet', dest='quiet', action='store_true',
                     help='If toggled, suppress console output.')
+parser.add_argument('-ds9', '--ds9', dest='ds9', action='store_true',
+                    help='If toggled, also output a ds9 regions file')
 
 def run(name, r_eff, axial_ratio, position_angle, num_masks,
         mu_eff=22.0, ra=None, dec=None, quiet=False):
@@ -72,10 +74,23 @@ def run(name, r_eff, axial_ratio, position_angle, num_masks,
         dec = dec        
     center = SkyCoord(ra, dec, unit='deg')
     galaxy = Galaxy(name, center, r_eff, axial_ratio, position_angle, mu_eff)
-    galaxy.optimize(num_masks, num_iter=100, resolution=0.5)
+    if num_masks == 2:
+        cone_angles = [60, 120]
+    else:
+        cone_angles = None
+    if not quiet:
+        print('Running MC on ' + galaxy.name)
+    galaxy.optimize(num_masks, num_iter=1000, resolution=1, cone_angles=cone_angles)
     for mask in galaxy.masks:
         output_file = mask.name + '_PA{:0.1f}_superskims.dsim'.format(mask.mask_pa)
+        if not quiet:
+            print('Writing dsim file for ' + mask.name + ' to ' + output_file)
         save_to_dsim(mask, galaxy.center, output_file)
+    if args.ds9:
+        output_file = galaxy.name + '_superskims.reg'
+        if not quiet:
+            print('Writing regions file for ' + galaxy.name + ' to ' + output_file)
+        save_galaxy_to_regions(galaxy, writeto=output_file, annotate=True)
     return 0
 
 

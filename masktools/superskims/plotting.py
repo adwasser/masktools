@@ -28,7 +28,7 @@ def slit_patches(mask, color=None, sky_coords=False, center=None):
             phi = np.pi / 2 - np.radians(slit.pa)
             delta_x = L * (np.cos(alpha + phi) - np.cos(alpha))
             delta_y = L * (np.sin(alpha + phi) - np.sin(alpha))
-            ra, dec = mask_to_sky(x - dx / 2, y - dy / 2, mask.mask_pa, center.dec.degree)
+            ra, dec = mask_to_sky(x - dx / 2, y - dy / 2, mask.mask_pa)
             blc0 = (ra, dec)
             angle = (90 - slit.pa)
             blc = (ra + delta_x, dec - delta_y)

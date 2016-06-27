@@ -43,21 +43,29 @@ class Galaxy:
     def __repr__(self):
         return '<Galaxy ' + self.name + ': ' + self.center.to_string('hmsdms') + '>'
         
-    def create_masks(self, num_masks):
+    def create_masks(self, num_masks, mask_cone_angles=None, cone_overlap=180.):
         '''
         Parameters
         ----------
         num_masks: int, number of masks to make for the galaxy
+        mask_cone_angles: list, if not None, sets the individual opening angles for each mask
+        cone_overlap: float, degrees, = cone_angle * num_masks
         '''
         self.masks = []
-        cone_angle = 180. / num_masks
+        if mask_cone_angles is not None:
+            assert len(mask_cone_angles) == num_masks
+            cone_angles = mask_cone_angles
+        else:
+            cone_angle = cone_overlap / num_masks
+            cone_angles = [cone_angle] * num_masks
+        sep_angle = 180. / num_masks
         for i in range(num_masks):
-            delta_pa = i * cone_angle
+            delta_pa = i * sep_angle
             mask_pa = self.position_angle + delta_pa
             mask_r_eff = np.sqrt((self.r_eff * np.cos(np.radians(delta_pa)))**2 +
                                  (self.r_eff * self.axial_ratio * np.sin(np.radians(delta_pa)))**2)
             name = str(i + 1) + self.name
-            self.masks.append(Mask(name, mask_pa, mask_r_eff, cone_angle, self.brightness_profile))
+            self.masks.append(Mask(name, mask_pa, mask_r_eff, cone_angles[i], self.brightness_profile))
 
     def slit_positions(self, best=False):
         '''
@@ -99,9 +107,9 @@ class Galaxy:
 
         assert len(xx) == len(yy)
         # take only points on one side of minor axis
-        mask = xx >= 0
-        xx = xx[mask]
-        yy = yy[mask]
+        # mask = xx >= 0
+        # xx = xx[mask]
+        # yy = yy[mask]
         num_slits = len(xx)
         
         # make grid samples
@@ -124,9 +132,9 @@ class Galaxy:
         distances = np.amin(np.sqrt((x_slits - x_points)**2 +
                                     (y_slits - y_points)**2),
                             axis=0)
-        return np.mean(distances)
+        return np.amax(distances)
 
-    def optimize(self, num_masks=4, num_iter=100, resolution=0.5):
+    def optimize(self, num_masks=4, num_iter=100, resolution=1, cone_angles=None, cone_overlap=180):
         '''
         Find the optimal spatial sampling of mask slits.
 
@@ -136,7 +144,7 @@ class Galaxy:
         num_iter: int, number of iterations in MC
         resolution: float, arcsec, spatial resolution of mask area to sample for MC
         '''
-        self.create_masks(num_masks)
+        self.create_masks(num_masks, cone_angles, cone_overlap)
         # iteratively randomize slit distribution and check spatial sampling
         best_result = np.inf
         for i in range(num_iter):

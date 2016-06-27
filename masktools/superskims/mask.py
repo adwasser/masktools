@@ -10,7 +10,7 @@ class Mask:
     
     def __init__(self, name, mask_pa, mask_r_eff, cone_angle, brightness_profile,
                  slit_separation=0.5, slit_width=1, min_slit_length=3,
-                 max_radius_factor=4, sky_spacing=50, angle_offset=5):
+                 max_radius_factor=4, angle_offset=5):
         '''
         Parameters
         ----------
@@ -24,7 +24,6 @@ class Mask:
         slit_width: float, arcsec, width of slit, should not be less than 1 arcsec
         min_slit_length: float, arcsec, the minimum slit length
         max_radius_factor: float, factors of Reff to which to extend the skims
-        sky_spacing: float, arcsec, how far from the edge of the mask to place the sky slits
         angle_offset: float, degrees, rotate the slits from the mask_pa by this amount
         '''
         # x_max, y_max, are the maximum spatial extent of the masks, in arcsec
@@ -39,7 +38,6 @@ class Mask:
         self.slit_width = slit_width
         self.min_slit_length = min_slit_length
         self.max_radius_factor = max_radius_factor
-        self.sky_spacing = sky_spacing
         self.angle_offset = angle_offset
         self.slits = []
         self.best_slits = []
@@ -47,7 +45,25 @@ class Mask:
     def __repr__(self):
         mask_params_str = '<Mask: ' + self.name + ': PA: {0:.2f}, Reff: {1:.2f}, Cone angle: {2:.2f}>'
         return mask_params_str.format(self.mask_pa, self.mask_r_eff, self.cone_angle)
-    
+
+    def get_slit(self, name):
+        '''
+        Searches through the slit slit list for the named slit.
+        
+        Parameters
+        ----------
+        name, str, name of slit
+
+        Returns
+        -------
+        slit, Slit, name of matching Slit object, or None if no match
+        '''
+        for slit in self.slits:
+            if slit.name.strip() == name.strip():
+                return slit
+        print(name + ' not found in ' + self.name + '!')
+        return None
+        
     def get_slit_length(self, x, y, snr=35., sky=19, integration_time=7200, plate_scale=0.1185,
                         gain=1.2, read_noise=2.5, dark_current=4, imag_count_20=1367):
         '''
@@ -140,20 +156,23 @@ class Mask:
             count += 1
             x += length + self.slit_separation
 
-    def add_sky_slits(self):
+    def add_sky_slits(self, num_sky_slits=10, sky_spacing=100):
         '''
         Place sky slits on the mask
+        
+        Parameters
+        ----------
+        num_sky_slits, int, maximum number of sky slits (per half of max) to place
+        sky_spacing, float, arcsec, start placing slits this far from mask edge
         '''
-        x = self.x_max - self.sky_spacing
+        x = self.x_max - sky_spacing
         count = 0
-        while x < self.x_max:
-            y_cone = np.tan(np.radians(self.cone_angle / 2.)) * x
-            y = np.random.uniform(-y_cone, y_cone)
+        while x < self.x_max and count < num_sky_slits:
+            y = np.random.uniform(-self.y_max, self.y_max)
             length = self.min_slit_length
             name = 'sky{0:02d}'.format(2 * count)
             self.slits.append(Slit(x + length / 2, y, length, self.slit_width,
                                    self.mask_pa + self.angle_offset, name=name))
-
             count += 1
             x += length + self.slit_separation
 

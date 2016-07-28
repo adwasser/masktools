@@ -6,3 +6,4 @@ from .version import __version__
 
 # set packages
 import masktools.superskims
+import masktools.stars

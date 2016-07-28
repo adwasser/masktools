@@ -4,6 +4,7 @@ masktools
 Utilities for designing DEIMOS slitmasks
 
 Contact: <adwasser@ucsc.edu>
+
 Website: <https://github.com/adwasser/masktools>
 
 Required packages
@@ -11,9 +12,6 @@ Required packages
 * numpy (tested on 1.11.0)
 * astropy (tested on 1.1.1)
 * matplotlib (tested on 1.5.0)
-
-Recommended packages
---------------------
 * astroquery (tested on 0.3.1)
 
 
@@ -62,4 +60,8 @@ For more fine-grained control, you can access the Mask and Galaxy classes throug
         output_file = mask.name + '_PA{:0.1f}_superskims.dsim'.format(mask.mask_pa)
         superskims.outputs.save_to_dsim(mask, galaxy.center, output_file)
 
+masktools.stars
+---------------
+This package is for obtaining good guide stars and align stars for a mask.  Work in progress.
+The `get_table` method in the `query_usno` model is likely to be reorganized at some point.
 

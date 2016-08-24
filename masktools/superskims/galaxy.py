@@ -5,7 +5,7 @@ import numpy as np
 from astropy.coordinates import SkyCoord
 
 from .utils import sersic_profile_function
-from .mask import Mask
+from .skimsmask import SKiMS_slitmask
 
 class Galaxy:
     '''This is a representation of a galaxy which needs slitmasks.'''
@@ -65,7 +65,7 @@ class Galaxy:
             mask_r_eff = np.sqrt((self.r_eff * np.cos(np.radians(delta_pa)))**2 +
                                  (self.r_eff * self.axial_ratio * np.sin(np.radians(delta_pa)))**2)
             name = str(i + 1) + self.name
-            self.masks.append(Mask(name, mask_pa, mask_r_eff, cone_angles[i], self.brightness_profile))
+            self.masks.append(SKiMS_slitmask(name, mask_pa, mask_r_eff, cone_angles[i], self.brightness_profile))
 
     def slit_positions(self, best=False):
         '''
@@ -80,10 +80,11 @@ class Galaxy:
         for mask in self.masks:
             theta = np.radians(mask.mask_pa - self.position_angle)
             if best:
-                x = np.array([slit.x for slit in mask.best_slits])
-                y = np.array([slit.x for slit in mask.best_slits])
+                x = mask.best_slits.x
+                y = mask.best_slits.y
             else:
-                x, y = mask.slit_positions()
+                x = mask.slits.x
+                y = mask.slits.y
             x_rot = x * np.cos(theta) - y * np.sin(theta)
             y_rot = x * np.sin(theta) + y * np.cos(theta)
             x_positions = np.concatenate([x_positions, x_rot, -x_rot])

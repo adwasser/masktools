@@ -3,9 +3,10 @@ from __future__ import (absolute_import, division,
 
 import numpy as np
 
-from .slit import Slit
+from masktools.slitmask import Slitmask
 
-class Mask:
+class SKiMS_slitmask(Slitmask):
+
     '''Represents a slitmask'''
     
     def __init__(self, name, mask_pa, mask_r_eff, cone_angle, brightness_profile,
@@ -26,11 +27,11 @@ class Mask:
         max_radius_factor: float, factors of Reff to which to extend the skims
         angle_offset: float, degrees, rotate the slits from the mask_pa by this amount
         '''
+        Slitmask. __init__(self, mask_name, mask_ra=None, mask_dec=None, mask_pa=mask_pa, slits=None)
+        
         # x_max, y_max, are the maximum spatial extent of the masks, in arcsec
-        self.name = name
         self.x_max = 498
         self.y_max = 146
-        self.mask_pa = mask_pa
         self.mask_r_eff = mask_r_eff
         self.cone_angle = cone_angle
         self.brightness_profile = brightness_profile
@@ -39,31 +40,12 @@ class Mask:
         self.min_slit_length = min_slit_length
         self.max_radius_factor = max_radius_factor
         self.angle_offset = angle_offset
-        self.slits = []
-        self.best_slits = []
+        self.best_slits = None
         
     def __repr__(self):
-        mask_params_str = '<Mask: ' + self.name + ': PA: {0:.2f}, Reff: {1:.2f}, Cone angle: {2:.2f}>'
+        mask_params_str = '<SKiMS_slitmask: ' + self.name + ': PA: {0:.2f}, Reff: {1:.2f}, Cone angle: {2:.2f}>'
         return mask_params_str.format(self.mask_pa, self.mask_r_eff, self.cone_angle)
 
-    def get_slit(self, name):
-        '''
-        Searches through the slit slit list for the named slit.
-        
-        Parameters
-        ----------
-        name, str, name of slit
-
-        Returns
-        -------
-        slit, Slit, name of matching Slit object, or None if no match
-        '''
-        for slit in self.slits:
-            if slit.name.strip() == name.strip():
-                return slit
-        print(name + ' not found in ' + self.name + '!')
-        return None
-        
     def get_slit_length(self, x, y, snr=35., sky=19, integration_time=7200, plate_scale=0.1185,
                         gain=1.2, read_noise=2.5, dark_current=4, imag_count_20=1367):
         '''
@@ -108,14 +90,6 @@ class Mask:
         area = npix * plate_scale**2
         length = area / self.slit_width
         return length
-
-    def slit_positions(self):
-        '''
-        Returns arrays with x, y positions of slits.
-        '''
-        xx = np.array([slit.x for slit in self.slits]) 
-        yy = np.array([slit.y for slit in self.slits])
-        return xx, yy
 
     def _test_slits(self):
         # reset slits
@@ -210,3 +184,4 @@ class Mask:
 
     def within_slits(self, x, y):
         return np.sqrt(x**2 + y**2) <= self.mask_r_eff * self.max_radius_factor 
+    

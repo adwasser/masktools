@@ -1,0 +1,17 @@
+masktools/
+    masktools/
+        __init__.py      
+        slitmask/
+	    __init__.py imports Slitmask, DEIMOS_slitmask
+	    slitmask.py provides Slitmask, DEIMOS_slitmask
+      	superskims/
+	    __init__.py imports Galaxy
+            galaxy.py provides Galaxy, requires Slitmask
+        stars/
+	    __init__.py imports get_table
+	    query_usno.py provides get_table
+	outputs/
+	    __init__.py imports *
+	    dsim.py provides mask_to_dsim
+	    regions.py provides mask_to_regions, galaxy_to_regions
+	    

@@ -58,8 +58,8 @@ class Slitmask(object):
         slits : record array (or pandas.DataFrame) of slits with attributes (fields/columns) of
                 ['name', 'x', 'y', 'left_edge', 'right_edge', 'ra', 'dec', 'pa', 'width', 'length', 'isalign']
                 name : str, unique identifier
-                x : float, arcsec, mask coordinate
-                y : float, arcsec, mask coordinate
+                x : float, arcsec, mask coordinate along spatial direction
+                y : float, arcsec, mask coordinate along dispersion direction
                 left_edge : float, arcsec, left edge x-coordinate 
                 right_edge : float, arcsec, right edge x-coordinate
                 ra : float, degree of sky coordinate
@@ -71,7 +71,7 @@ class Slitmask(object):
         '''
         self._mask_name = mask_name
         try:
-            self._mask_coord = SkyCoord(mask_ra, mask_dec, unit=('deg', 'deg'))
+            self._mask_coord = SkyCoord(mask_ra, mask_dec, unit=u.deg)
             # self._slit_coords = ...
         except TypeError:
             self._mask_coord = None
@@ -81,7 +81,7 @@ class Slitmask(object):
             self.slits = pd.DataFrame(columns=columns)
         else:
             self.slits = pd.DataFrame(slits)
-
+        self._slit_coords = SkyCoord(self.slits.ra, self.slits.dec, unit=u.deg)
 
     def __len__(self):
         return len(self.slits)
@@ -99,6 +99,10 @@ class Slitmask(object):
     def mask_coord(self):
         return self._mask_coord
 
+    @property
+    def slit_coords(self):
+        return self._slit_coords
+    
     @property
     def mask_pa(self):
         return self._mask_pa

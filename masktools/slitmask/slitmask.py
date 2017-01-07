@@ -76,12 +76,11 @@ class Slitmask(object):
         except TypeError:
             self._mask_coord = None
         self._mask_pa = mask_pa
-        columns = ['name', 'x', 'y', 'left_edge', 'right_edge', 'pa', 'width', 'length', 'isalign']
         if slits is None:
-            self.slits = pd.DataFrame(columns=columns)
+            self.reset_slits()
         else:
             self.slits = pd.DataFrame(slits)
-        self._slit_coords = SkyCoord(self.slits.ra, self.slits.dec, unit=u.deg)
+            self._slit_coords = SkyCoord(self.slits.ra, self.slits.dec, unit=u.deg)
 
     def __len__(self):
         return len(self.slits)
@@ -107,6 +106,20 @@ class Slitmask(object):
     def mask_pa(self):
         return self._mask_pa
 
+    def reset_slits(self):
+        columns = ['name', 'x', 'y', 'left_edge', 'right_edge', 'pa', 'width', 'length', 'isalign']
+        self.slits = pd.DataFrame(columns=columns)
+        
+    def add_slit(self, name=None, x=None, y=None, left_edge=None, right_edge=None,
+                 pa=None, width=None, length=None, isalign=None):
+        '''
+        Add a slit to the dataframe.
+        '''
+        columns = ['name', 'x', 'y', 'left_edge', 'right_edge', 'pa', 'width', 'length', 'isalign']
+        new_slit = pd.Series([name, x, y, left_edge, right_edge, pa, width, length, isalign],
+                             index=columns)
+        self.slits = self.slits.append(new_slit, ignore_index=True)
+        
     def slit_edges(self, idx=slice(None), coord_transform=None):
         '''
         Parameters

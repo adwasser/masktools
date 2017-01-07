@@ -30,7 +30,7 @@ def I_sersic(R, I0, Re, n):
     '''
     try:
         I = I0 * np.exp(-b_cb(n) * (R / Re)**(1. / n))
-    except FloatingPointError, e:
+    except FloatingPointError as e:
         print(e)
         I = 0
     return I

@@ -4,12 +4,13 @@ from __future__ import (absolute_import, division,
 import numpy as np
 
 from masktools.slitmask import Slitmask
+from .slit import Slit
 
 class SKiMS_slitmask(Slitmask):
 
     '''Represents a slitmask'''
     
-    def __init__(self, name, mask_pa, mask_r_eff, cone_angle, brightness_profile,
+    def __init__(self, mask_name, mask_pa, mask_r_eff, cone_angle, brightness_profile,
                  slit_separation=0.5, slit_width=1, min_slit_length=3,
                  max_radius_factor=4, angle_offset=5):
         '''
@@ -43,7 +44,7 @@ class SKiMS_slitmask(Slitmask):
         self.best_slits = None
         
     def __repr__(self):
-        mask_params_str = '<SKiMS_slitmask: ' + self.name + ': PA: {0:.2f}, Reff: {1:.2f}, Cone angle: {2:.2f}>'
+        mask_params_str = '<SKiMS_slitmask: ' + self.mask_name + ': PA: {0:.2f}, Reff: {1:.2f}, Cone angle: {2:.2f}>'
         return mask_params_str.format(self.mask_pa, self.mask_r_eff, self.cone_angle)
 
     def get_slit_length(self, x, y, snr=35., sky=19, integration_time=7200, plate_scale=0.1185,
@@ -93,7 +94,7 @@ class SKiMS_slitmask(Slitmask):
 
     def _test_slits(self):
         # reset slits
-        self.slits = []
+        self.reset_slits()
         # x is at the left edge of the slit
         x = self.slit_separation / 2.
         count = 0
@@ -104,8 +105,8 @@ class SKiMS_slitmask(Slitmask):
             length = max(self.min_slit_length, self.get_slit_length(x, y))
             # first run gets even indices, rotated copy gets odd indices
             name = 'skims{0:02d}'.format(2 * count)
-            self.slits.append(Slit(x + length / 2, y, length, self.slit_width,
-                                   self.mask_pa + self.angle_offset, name=name))
+            self.add_slit(x=x + length / 2, y=y, length=length, width=self.slit_width,
+                          pa=self.mask_pa + self.angle_offset, name=name)
             count += 1
             x += length + self.slit_separation
         
@@ -115,7 +116,7 @@ class SKiMS_slitmask(Slitmask):
         satisfying a signal-to-noise requirement.
         '''
         # reset slits
-        self.slits = []
+        self.reset_slits()
         # x is at the left edge of the slit
         x = self.slit_separation / 2.
         count = 0
@@ -125,8 +126,8 @@ class SKiMS_slitmask(Slitmask):
             length = max(self.min_slit_length, self.get_slit_length(x, y))
             # first run gets even indices, rotated copy gets odd indices
             name = 'skims{0:02d}'.format(2 * count)
-            self.slits.append(Slit(x + length / 2, y, length, self.slit_width,
-                                   self.mask_pa + self.angle_offset, name=name))
+            self.add_slit(x=x + length / 2, y=y, length=length, width=self.slit_width,
+                          pa=self.mask_pa + self.angle_offset, name=name)
             count += 1
             x += length + self.slit_separation
 
@@ -145,8 +146,8 @@ class SKiMS_slitmask(Slitmask):
             y = np.random.uniform(-self.y_max, self.y_max)
             length = self.min_slit_length
             name = 'sky{0:02d}'.format(2 * count)
-            self.slits.append(Slit(x + length / 2, y, length, self.slit_width,
-                                   self.mask_pa + self.angle_offset, name=name))
+            self.add_slit(x=x + length / 2, y=y, length=length, width=self.slit_width,
+                          pa=self.mask_pa + self.angle_offset, name=name)
             count += 1
             x += length + self.slit_separation
 

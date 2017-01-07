@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division,
 from .plotting import *
 from .outputs import *
 from .slit import Slit
-from .mask import Mask
+from .skimsmask import SKiMS_slitmask
 from .galaxy import Galaxy
 
 

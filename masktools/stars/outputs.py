@@ -51,7 +51,7 @@ def table_to_dsim(table, guide=False, writeto=None):
     with open(writeto, 'w') as f:
         for i in range(len(table)):
             name = names[i] + ' ' * (16 - len(names[i]))
-            ra, dec = coords[i].to_string('hmsdms').split()
+            ra, dec = coords[i].to_string('hmsdms', sep=':').split()
             epoch = '2000.0'
             pcode = '-1' if guide else '-2'
             sample = '1'

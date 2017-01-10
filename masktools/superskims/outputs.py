@@ -71,7 +71,7 @@ def save_to_dsim(mask, center, writeto=None):
     mask is a Mask, center is a SkyCoord, writeto is the output file name
     '''
     with open(writeto, 'w') as f:
-        ra_str, dec_str = center.to_string('hmsdms').split(' ')
+        ra_str, dec_str = center.to_string('hmsdms', sep=':').split(' ')
         name = mask.mask_name + '_PA{:0.1f}'.format(mask.mask_pa)
         header = '\t'.join([name, ra_str, dec_str, '2000.0', 'PA={:.2f}'.format(mask.mask_pa)]) + '\n\n'
         f.write(header)

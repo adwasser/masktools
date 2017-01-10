@@ -3,6 +3,7 @@ from __future__ import (absolute_import, division,
 
 __all__ = ['save_to_regions', 'save_galaxy_to_regions', 'save_to_dsim']
 
+import os
 from itertools import cycle
 import numpy as np
 from astropy.coordinates import SkyCoord
@@ -44,17 +45,19 @@ def save_galaxy_to_regions(galaxy, writeto=None, annotate=False):
         colors = cycle(['red', 'green', 'blue', 'magenta', 'cyan', 'yellow'])
         for mask in galaxy.masks:
             color = next(colors)
-            x, y = mask.slit_positions()
+            x = mask.slits.x
+            y = mask.slits.y
             ra_offsets, dec_offsets = mask_to_sky(x, y, mask.mask_pa)
             ra = (ra_offsets / np.cos(center.dec.radian) + center.ra.arcsec) * u.arcsec
             dec = (dec_offsets + center.dec.arcsec) * u.arcsec
             coords = SkyCoord(ra, dec)
             for i, slit in enumerate(mask.slits):
-                name = mask.name[0] + slit.name
+                x, y, length, width, pa, name = slit
+                name = mask.mask_name + '_' + name
                 ra, dec = coords[i].to_string('hmsdms', sep=':').split()
-                pa = '{:.2f}'.format(slit.pa)
-                height = '{:.2f}'.format(slit.length) + '\"'
-                width = '{:.2f}'.format(slit.width) + '\"'
+                pa = '{:.2f}'.format(pa)
+                height = '{:.2f}'.format(length) + '\"'
+                width = '{:.2f}'.format(width) + '\"'
                 line = 'box(' + ', '.join([ra, dec, width, height, pa])
                 if annotate:
                     line += ') # color=' + color + ' text={' + name + '}\n'
@@ -69,20 +72,33 @@ def save_to_dsim(mask, center, writeto=None):
     '''
     with open(writeto, 'w') as f:
         ra_str, dec_str = center.to_string('hmsdms').split(' ')
-        name = mask.name + '_PA{:0.1f}'.format(mask.mask_pa)
+        name = mask.mask_name + '_PA{:0.1f}'.format(mask.mask_pa)
         header = '\t'.join([name, ra_str, dec_str, '2000.0', 'PA={:.2f}'.format(mask.mask_pa)]) + '\n\n'
         f.write(header)
-        x, y = mask.slit_positions()
+        x = mask.slits.x
+        y = mask.slits.y
         ra_offsets, dec_offsets = mask_to_sky(x, y, mask.mask_pa)
         ra = (ra_offsets / np.cos(center.dec.radian) + center.ra.arcsec) * u.arcsec
         dec = (dec_offsets + center.dec.arcsec) * u.arcsec
         coords = SkyCoord(ra, dec)
         for i, slit in enumerate(mask.slits):
-            name = slit.name + ' ' * (16 - len(slit.name))
+            x, y, length, width, pa, name = slit
+            name = name + ' ' * (16 - len(name))
             ra, dec = coords[i].to_string('hmsdms', sep=':').split()
-            pa = '{:.2f}'.format(slit.pa)
-            half_len = '{:.2f}'.format(slit.length / 2)
-            width = '{:.2f}'.format(slit.width)
+            pa = '{:.2f}'.format(pa)
+            half_len = '{:.2f}'.format(length / 2)
+            width = '{:.2f}'.format(width)
             line = name + '\t'.join([ra, dec, '2000.0', '0', 'R', '100', '1', '1',
                                      pa, half_len, width]) + '\n'
             f.write(line)
+
+def save_galaxy_to_dsim(galaxy, clobber=False):
+    '''
+    write out dsim inputs for the galaxy, only overwrite if prompted
+    '''
+    for mask in galaxy.masks:
+        filename = mask.mask_name + '_PA{:d}'.format(round(mask.mask_pa)) + '_skims.in'
+        if os.path.isfile(filename) and not clobber:
+            raise ValueError(filename + ' exists, need to set clobber=True')
+        save_to_dsim(mask, galaxy.center, writeto=filename)
+        

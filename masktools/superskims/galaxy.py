@@ -43,13 +43,14 @@ class Galaxy:
     def __repr__(self):
         return '<Galaxy ' + self.name + ': ' + self.center.to_string('hmsdms') + '>'
         
-    def create_masks(self, num_masks, mask_cone_angles=None, cone_overlap=180.):
+    def create_masks(self, num_masks, mask_cone_angles=None, cone_overlap=180., **mask_kwargs):
         '''
         Parameters
         ----------
         num_masks: int, number of masks to make for the galaxy
         mask_cone_angles: list, if not None, sets the individual opening angles for each mask
         cone_overlap: float, degrees, = cone_angle * num_masks
+        **mask_kwargs: passed to SKiMS_slitmask instance
         '''
         self.masks = []
         if mask_cone_angles is not None:
@@ -65,7 +66,9 @@ class Galaxy:
             mask_r_eff = np.sqrt((self.r_eff * np.cos(np.radians(delta_pa)))**2 +
                                  (self.r_eff * self.axial_ratio * np.sin(np.radians(delta_pa)))**2)
             name = str(i + 1) + self.name
-            self.masks.append(SKiMS_slitmask(name, mask_pa, mask_r_eff, cone_angles[i], self.brightness_profile))
+            mask = SKiMS_slitmask(name, mask_pa, mask_r_eff, cone_angles[i],
+                                  self.brightness_profile, **mask_kwargs)
+            self.masks.append(mask)
 
     def slit_positions(self, best=False):
         '''
@@ -108,20 +111,25 @@ class Galaxy:
 
         assert len(xx) == len(yy)
         # take only points on one side of minor axis
-        # mask = xx >= 0
-        # xx = xx[mask]
-        # yy = yy[mask]
+        mask = xx >= 0
+        xx = xx[mask]
+        yy = yy[mask]
         num_slits = len(xx)
-        
+
         # make grid samples
         x_samples = np.linspace(0, np.amax(xx), int(np.amax(xx) / resolution))
         y_samples = np.linspace(np.amin(yy), np.amax(yy), int(np.ptp(yy) / resolution))
-
+        
         # flatten grid
         x_flat = np.tile(x_samples, y_samples.shape)
         y_flat = np.tile(y_samples, (x_samples.size, 1)).T.flatten()
+
+        # take points in a circle of 1.5 r_eff
+        circle = x_flat ** 2 + y_flat ** 2 < (1.5 * self.r_eff) ** 2
+        x_flat = x_flat[circle]
+        y_flat = y_flat[circle]
         num_points = len(x_flat)
-        
+
         # tile grid to n_points by n_slits
         x_points = np.tile(x_flat, (num_slits, 1))
         y_points = np.tile(y_flat, (num_slits, 1))
@@ -129,13 +137,16 @@ class Galaxy:
         # tile slit positions to n_points by n_slits
         x_slits = np.tile(xx, (num_points, 1)).T
         y_slits = np.tile(yy, (num_points, 1)).T        
-        
+
         distances = np.amin(np.sqrt((x_slits - x_points)**2 +
                                     (y_slits - y_points)**2),
                             axis=0)
-        return np.amax(distances)
+        # return np.amax(distances)
+        return np.sum(distances)
 
-    def optimize(self, num_masks=4, num_iter=100, resolution=1, cone_angles=None, cone_overlap=180, debug=True):
+
+    def optimize(self, num_masks=4, num_iter=100, resolution=1,
+                 cone_angles=None, cone_overlap=180, **mask_kwargs):
         '''
         Find the optimal spatial sampling of mask slits.
 
@@ -144,42 +155,29 @@ class Galaxy:
         num_masks: int, number of masks to make for the galaxy
         num_iter: int, number of iterations in MC
         resolution: float, arcsec, spatial resolution of mask area to sample for MC
+        
         '''
-        self.create_masks(num_masks, cone_angles, cone_overlap)
+        self.create_masks(num_masks, cone_angles, cone_overlap, **mask_kwargs)
         # iteratively randomize slit distribution and check spatial sampling
-        if debug:
-            import pdb
-            memblock = 'a' * int(1e7)
         best_result = np.inf
-        try:
-            for i in range(num_iter):
-                print('Iteration', i)
-                # print(i)
-                # randomize slits
-                for j, mask in enumerate(self.masks):
-                    print('\tRandomizing mask', j)
-                    mask.random_slits()
-                # list of positions rotated to the major axis of galaxy
-                print('\tGetting positions')
-                x_positions, y_positions = self.slit_positions()
-                print('\tCalculating metric')
-                metric = self.sampling_metric(x_positions, y_positions, resolution)
-                # minimize metric
-                if metric < best_result:
-                    print('\tFound better metric:', metric) 
-                    # copy current slit configuration to best setup
-                    for mask in self.masks:
-                        # cleanup first
-                        # del mask.best_slits[:]
-                        # storage next
-                        mask.best_slits = mask.slits
-                    best_result = metric
-        except MemoryError as e:
-            memblock = None
-            pdb.set_trace()
+        for i in range(num_iter):
+            # print(i)
+            # randomize slits
+            for j, mask in enumerate(self.masks):
+                mask.random_slits()
+            # print("Masks: ", self.masks)
+            # list of positions rotated to the major axis of galaxy
+            x_positions, y_positions = self.slit_positions()
+            metric = self.sampling_metric(x_positions, y_positions, resolution)
+            # minimize metric
+            if metric < best_result:
+                print('Iteration', i, 'found better metric:', metric)
+                # copy current slit configuration to best setup
+                for mask in self.masks:
+                    mask.best_slits = mask.slits
+                best_result = metric
         # add sky slits and mirror the final results
         for i, mask in enumerate(self.masks):
-            print('Adding sky slits and mirroring designs for mask', i)
             mask.add_sky_slits()
             mask.mirror_slits()
         return best_result

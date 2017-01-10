@@ -47,7 +47,8 @@ def a_ellipse(r, theta, axial_ratio):
     This is de-projecting from the sky coordinate (r, theta) to the circularized radial coordinate in the
     galaxy's frame of reference.
     '''
-    return r / axial_ratio * np.sqrt(np.sin(theta)**2 + axial_ratio**2 * np.cos(theta)**2)
+    return r * np.sqrt(np.cos(theta) ** 2 + axial_ratio ** 2 * np.sin(theta) ** 2)
+# return r / axial_ratio * np.sqrt(np.sin(theta)**2 + axial_ratio**2 * np.cos(theta)**2)
 
 
 def sersic_profile_function(mu_eff, r_eff, n, position_angle, axial_ratio):

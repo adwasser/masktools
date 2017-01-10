@@ -135,7 +135,7 @@ class Galaxy:
                             axis=0)
         return np.amax(distances)
 
-    def optimize(self, num_masks=4, num_iter=100, resolution=1, cone_angles=None, cone_overlap=180):
+    def optimize(self, num_masks=4, num_iter=100, resolution=1, cone_angles=None, cone_overlap=180, debug=True):
         '''
         Find the optimal spatial sampling of mask slits.
 
@@ -147,26 +147,39 @@ class Galaxy:
         '''
         self.create_masks(num_masks, cone_angles, cone_overlap)
         # iteratively randomize slit distribution and check spatial sampling
+        if debug:
+            import pdb
+            memblock = 'a' * int(1e7)
         best_result = np.inf
-        for i in range(num_iter):
-            # print(i)
-            # randomize slits
-            for mask in self.masks:
-                mask.random_slits()
-            # list of positions rotated to the major axis of galaxy
-            x_positions, y_positions = self.slit_positions()
-            metric = self.sampling_metric(x_positions, y_positions, resolution)
-            # minimize metric
-            if metric < best_result:
-                # copy current slit configuration to best setup
-                for mask in self.masks:
-                    # cleanup first
-                    # del mask.best_slits[:]
-                    # storage next
-                    mask.best_slits = mask.slits
-                best_result = metric
+        try:
+            for i in range(num_iter):
+                print('Iteration', i)
+                # print(i)
+                # randomize slits
+                for j, mask in enumerate(self.masks):
+                    print('\tRandomizing mask', j)
+                    mask.random_slits()
+                # list of positions rotated to the major axis of galaxy
+                print('\tGetting positions')
+                x_positions, y_positions = self.slit_positions()
+                print('\tCalculating metric')
+                metric = self.sampling_metric(x_positions, y_positions, resolution)
+                # minimize metric
+                if metric < best_result:
+                    print('\tFound better metric:', metric) 
+                    # copy current slit configuration to best setup
+                    for mask in self.masks:
+                        # cleanup first
+                        # del mask.best_slits[:]
+                        # storage next
+                        mask.best_slits = mask.slits
+                    best_result = metric
+        except MemoryError as e:
+            memblock = None
+            pdb.set_trace()
         # add sky slits and mirror the final results
-        for mask in self.masks:
+        for i, mask in enumerate(self.masks):
+            print('Adding sky slits and mirroring designs for mask', i)
             mask.add_sky_slits()
             mask.mirror_slits()
         return best_result
